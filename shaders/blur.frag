@@ -1,5 +1,7 @@
 #version 450 core
 
+// stolen from https://learnopengl.com/Advanced-Lighting/Bloom
+
 out vec4 frag_color;
   
 in vec2 tex_coords;
