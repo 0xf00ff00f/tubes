@@ -19,6 +19,7 @@ include_directories(
 add_executable(demo
     main.cc
     shader_program.cc
+    rand.cc
     util.cc)
 
 target_link_libraries(
