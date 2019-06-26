@@ -2,7 +2,6 @@
 
 #include "geometry.h"
 #include "shader_program.h"
-#include "noise.h"
 #include "util.h"
 #include "rand.h"
 
@@ -21,6 +20,82 @@
 // #define DUMP_FRAMES
 
 #define PERTURB
+
+class sphere_geometry
+{
+public:
+    sphere_geometry(glm::vec3 &center, float radius, int max_subdivisions)
+        : center_(center)
+        , radius_(radius)
+        , max_subdivisions_(max_subdivisions)
+    {
+        initialize_geometry(center, radius);
+    }
+
+    void render() const
+    {
+        geometry_.bind();
+        glDrawElements(GL_TRIANGLES, indices_.size(), GL_UNSIGNED_SHORT, nullptr);
+    }
+
+private:
+    void initialize_geometry(const glm::vec3 &center, float radius)
+    {
+        const auto i1 = add_vertex(glm::vec3{0.000000, 0.000000, 0.612372});
+        const auto i2 = add_vertex(glm::vec3{-0.288675, -0.500000, -0.204124});
+        const auto i3 = add_vertex(glm::vec3{-0.288675, 0.500000, -0.204124});
+        const auto i4 = add_vertex(glm::vec3{0.577350, 0.000000, -0.204124});
+
+        subdivide_triangle(i2, i3, i4, 0);
+        subdivide_triangle(i3, i2, i1, 0);
+        subdivide_triangle(i4, i1, i2, 0);
+        subdivide_triangle(i1, i4, i3, 0);
+
+        geometry_.set_data(verts_, indices_);
+    }
+
+    void subdivide_triangle(int i0, int i1, int i2, int level)
+    {
+        if (level == max_subdivisions_)
+        {
+            indices_.push_back(i0);
+            indices_.push_back(i1);
+            indices_.push_back(i2);
+        }
+        else
+        {
+            const auto &v0 = std::get<1>(verts_[i0]);
+            const auto &v1 = std::get<1>(verts_[i1]);
+            const auto &v2 = std::get<1>(verts_[i2]);
+
+            const auto i01 = add_vertex(0.5f*(v0 + v1));
+            const auto i12 = add_vertex(0.5f*(v1 + v2));
+            const auto i20 = add_vertex(0.5f*(v2 + v0));
+
+            subdivide_triangle(i0, i01, i20, level + 1);
+            subdivide_triangle(i01, i1, i12, level + 1);
+            subdivide_triangle(i20, i12, i2, level + 1);
+            subdivide_triangle(i01, i12, i20, level + 1);
+        }
+    }
+
+    int add_vertex(const glm::vec3 &v)
+    {
+        const auto n = glm::normalize(v);
+        const auto p = center_ + radius_*n;
+        verts_.emplace_back(p, n);
+        return verts_.size() - 1;
+    }
+
+    glm::vec3 center_;
+    float radius_;
+    int max_subdivisions_;
+
+    using vertex = std::tuple<glm::vec3, glm::vec3>;
+    std::vector<vertex> verts_;
+    std::vector<GLshort> indices_;
+    geometry geometry_;
+};
 
 class tube_geometry
 {
@@ -162,10 +237,11 @@ public:
         program_.set_uniform(program_.uniform_location("light_positions"), light_positions);
         program_.set_uniform(program_.uniform_location("global_light"), glm::vec3(5, 7, 5));
 
+        for (auto &cell : cells_)
+            cell->render();
+
         for (auto &tube : tubes_)
-        {
             tube->render();
-        }
 
         cur_time_ += dt;
         for (auto &light : lights_)
@@ -211,7 +287,7 @@ private:
             }
         }
 
-        // tubes
+        // cells/tubes
 
         for (int i = 0; i < grid_layers; ++i)
         {
@@ -219,6 +295,8 @@ private:
             {
                 for (int k = 0; k < grid_cols; ++k)
                 {
+                    cells_.emplace_back(new sphere_geometry(grid_[i][j][k], 0.3, 3));
+
                     if (i < grid_layers - 1)
                         tubes_.emplace_back(new tube_geometry(grid_[i][j][k], grid_[i + 1][j][k]));
 
@@ -260,6 +338,7 @@ private:
 
     std::array<std::array<std::array<glm::vec3, grid_cols>, grid_rows>, grid_layers> grid_;
     std::vector<std::unique_ptr<tube_geometry>> tubes_;
+    std::vector<std::unique_ptr<sphere_geometry>> cells_;
 
     struct light
     {
