@@ -381,7 +381,7 @@ private:
         float t;
         bool direction;
     };
-    static constexpr int num_lights = 23;
+    static constexpr int num_lights = 17;
     std::array<light, num_lights> lights_;
     blur_effect blur_;
 };
@@ -415,7 +415,7 @@ int main()
     });
 
 #ifdef DUMP_FRAMES
-    constexpr auto total_frames = 1200;
+    constexpr auto total_frames = 1600;
     auto frame_num = 0;
 #endif
 

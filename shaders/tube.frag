@@ -1,7 +1,7 @@
 #version 450 core
 
 uniform vec3 global_light;
-uniform vec3 light_positions[23];
+uniform vec3 light_positions[17];
 
 in vec3 world_position;
 in vec3 world_normal;
