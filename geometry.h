@@ -130,6 +130,17 @@ public:
         detail::declare_vertex_attrib_pointers(VertexT{});
     }
 
+    template<typename VertexT>
+    void set_data(const std::vector<VertexT> &verts)
+    {
+        glBindVertexArray(vao_);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_[0]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(VertexT) * verts.size(), verts.data(), GL_STATIC_DRAW);
+
+        detail::declare_vertex_attrib_pointers(VertexT{});
+    }
+
     void bind() const { glBindVertexArray(vao_); }
 
 private:

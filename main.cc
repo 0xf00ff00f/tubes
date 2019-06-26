@@ -4,6 +4,7 @@
 #include "shader_program.h"
 #include "util.h"
 #include "rand.h"
+#include "blur_effect.h"
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -20,6 +21,7 @@
 // #define DUMP_FRAMES
 
 #define PERTURB
+#define GLOW
 
 class sphere_geometry
 {
@@ -205,6 +207,7 @@ public:
     demo(int window_width, int window_height)
         : window_width_(window_width)
         , window_height_(window_height)
+        , blur_(window_width/4, window_height/4)
     {
         initialize_shader();
         initialize_geometry();
@@ -212,36 +215,28 @@ public:
 
     void render_and_step(float dt)
     {
-        const auto projection =
-            glm::perspective(glm::radians(45.0f), static_cast<float>(window_width_) / window_height_, 0.1f, 100.f);
-        const auto view_pos = glm::vec3(0, 0, 20.f - 1.f*cur_time_);
-        const auto view_up = glm::vec3(cosf(0.1f*cur_time_), sinf(0.1f*cur_time_), 0);
-        const auto view = glm::lookAt(view_pos, glm::vec3(0, 0, 0), view_up);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
 
-        const auto model = glm::mat4(1.0f);
-        const auto mvp = projection * view * model;
+#ifdef GLOW
+        blur_.bind();
+        glViewport(0, 0, blur_.width(), blur_.height());
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_MULTISAMPLE);
+        render(program_glow_);
+#endif
 
-        glm::mat3 model_normal(model);
-        model_normal = glm::inverse(model_normal);
-        model_normal = glm::transpose(model_normal);
+        framebuffer::unbind();
+        glViewport(0, 0, window_width_, window_height_);
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_MULTISAMPLE);
+        render(program_);
 
-        program_.bind();
-        program_.set_uniform(program_.uniform_location("mvp"), mvp);
-        program_.set_uniform(program_.uniform_location("normalMatrix"), model_normal);
-        program_.set_uniform(program_.uniform_location("modelMatrix"), model);
-
-        std::vector<glm::vec3> light_positions;
-        std::transform(lights_.begin(), lights_.end(), std::back_inserter(light_positions), [](auto &light) {
-            return light.tube->pos_at(light.t);
-        });
-        program_.set_uniform(program_.uniform_location("light_positions"), light_positions);
-        program_.set_uniform(program_.uniform_location("global_light"), glm::vec3(5, 7, 5));
-
-        for (auto &cell : cells_)
-            cell->render();
-
-        for (auto &tube : tubes_)
-            tube->render();
+#ifdef GLOW
+        blur_.render(window_width_, window_height_);
+#endif
 
         cur_time_ += dt;
         for (auto &light : lights_)
@@ -263,6 +258,13 @@ private:
         program_.add_shader(GL_VERTEX_SHADER, "shaders/tube.vert");
         program_.add_shader(GL_FRAGMENT_SHADER, "shaders/tube.frag");
         program_.link();
+
+        program_.bind();
+        program_.set_uniform(program_.uniform_location("global_light"), glm::vec3(5, 7, 5));
+
+        program_glow_.add_shader(GL_VERTEX_SHADER, "shaders/tube.vert");
+        program_glow_.add_shader(GL_FRAGMENT_SHADER, "shaders/tube-glow.frag");
+        program_glow_.link();
     }
 
     void initialize_geometry()
@@ -319,12 +321,45 @@ private:
         }
     }
 
+    void render(const shader_program &program) const
+    {
+        const auto projection =
+            glm::perspective(glm::radians(45.0f), static_cast<float>(window_width_) / window_height_, 0.1f, 100.f);
+        const auto view_pos = glm::vec3(0, 0, -1.f - 1.f*cur_time_);
+        const auto view_up = glm::vec3(cosf(0.1f*cur_time_), sinf(0.1f*cur_time_), 0);
+        const auto view = glm::lookAt(view_pos, glm::vec3(0, 0, 0), view_up);
+
+        const auto model = glm::mat4(1.0f);
+        const auto mvp = projection * view * model;
+
+        glm::mat3 model_normal(model);
+        model_normal = glm::inverse(model_normal);
+        model_normal = glm::transpose(model_normal);
+
+        program.bind();
+        program.set_uniform(program.uniform_location("mvp"), mvp);
+        program.set_uniform(program.uniform_location("normalMatrix"), model_normal);
+        program.set_uniform(program.uniform_location("modelMatrix"), model);
+
+        std::vector<glm::vec3> light_positions;
+        std::transform(lights_.begin(), lights_.end(), std::back_inserter(light_positions), [](auto &light) {
+            return light.tube->pos_at(light.t);
+        });
+        program.set_uniform(program.uniform_location("light_positions"), light_positions);
+
+        for (auto &cell : cells_)
+            cell->render();
+
+        for (auto &tube : tubes_)
+            tube->render();
+    }
+
     int window_width_;
     int window_height_;
 
     float cur_time_ = 0.f;
 
-    shader_program program_;
+    shader_program program_, program_glow_;
 
     static constexpr auto grid_cols = 5;
     static constexpr auto grid_rows = 5;
@@ -346,8 +381,9 @@ private:
         float t;
         bool direction;
     };
-    static constexpr int num_lights = 17;
+    static constexpr int num_lights = 23;
     std::array<light, num_lights> lights_;
+    blur_effect blur_;
 };
 
 int main()
@@ -378,12 +414,8 @@ int main()
             glfwSetWindowShouldClose(window, GL_TRUE);
     });
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glEnable(GL_MULTISAMPLE);
-
 #ifdef DUMP_FRAMES
-    constexpr auto total_frames = 150;
+    constexpr auto total_frames = 1200;
     auto frame_num = 0;
 #endif
 
@@ -392,10 +424,6 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
-        glViewport(0, 0, window_width, window_height);
-        glClearColor(0, 0, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 #ifdef DUMP_FRAMES
         const auto dt = 1.0f / 40;
 #else

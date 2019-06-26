@@ -50,7 +50,7 @@ void shader_program::link()
         panic("failed to link shader program\n");
 }
 
-void shader_program::bind()
+void shader_program::bind() const
 {
     glUseProgram(id_);
 }
@@ -60,52 +60,52 @@ int shader_program::uniform_location(std::string_view name) const
     return glGetUniformLocation(id_, name.data());
 }
 
-void shader_program::set_uniform(int location, float value)
+void shader_program::set_uniform(int location, float value) const
 {
     glUniform1f(location, value);
 }
 
-void shader_program::set_uniform(int location, const glm::vec2 &value)
+void shader_program::set_uniform(int location, const glm::vec2 &value) const
 {
     glUniform2fv(location, 1, glm::value_ptr(value));
 }
 
-void shader_program::set_uniform(int location, const glm::vec3 &value)
+void shader_program::set_uniform(int location, const glm::vec3 &value) const
 {
     glUniform3fv(location, 1, glm::value_ptr(value));
 }
 
-void shader_program::set_uniform(int location, const glm::vec4 &value)
+void shader_program::set_uniform(int location, const glm::vec4 &value) const
 {
     glUniform4fv(location, 1, glm::value_ptr(value));
 }
 
-void shader_program::set_uniform(int location, const std::vector<float> &value)
+void shader_program::set_uniform(int location, const std::vector<float> &value) const
 {
     glUniform1fv(location, value.size(), value.data());
 }
 
-void shader_program::set_uniform(int location, const std::vector<glm::vec2> &value)
+void shader_program::set_uniform(int location, const std::vector<glm::vec2> &value) const
 {
     glUniform2fv(location, value.size(), reinterpret_cast<const float *>(value.data()));
 }
 
-void shader_program::set_uniform(int location, const std::vector<glm::vec3> &value)
+void shader_program::set_uniform(int location, const std::vector<glm::vec3> &value) const
 {
     glUniform3fv(location, value.size(), reinterpret_cast<const float *>(value.data()));
 }
 
-void shader_program::set_uniform(int location, const std::vector<glm::vec4> &value)
+void shader_program::set_uniform(int location, const std::vector<glm::vec4> &value) const
 {
     glUniform4fv(location, value.size(), reinterpret_cast<const float *>(value.data()));
 }
 
-void shader_program::set_uniform(int location, const glm::mat3 &value)
+void shader_program::set_uniform(int location, const glm::mat3 &value) const
 {
     glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
 }
 
-void shader_program::set_uniform(int location, const glm::mat4 &value)
+void shader_program::set_uniform(int location, const glm::mat4 &value) const
 {
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
 }

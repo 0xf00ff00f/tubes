@@ -20,7 +20,8 @@ add_executable(demo
     main.cc
     shader_program.cc
     rand.cc
-    util.cc)
+    util.cc
+    framebuffer.cc)
 
 target_link_libraries(
     demo
