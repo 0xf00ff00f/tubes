@@ -22,6 +22,7 @@ public:
 
     int uniform_location(std::string_view name) const;
 
+    void set_uniform(int location, int v) const;
     void set_uniform(int location, float v) const;
     void set_uniform(int location, const glm::vec2 &v) const;
     void set_uniform(int location, const glm::vec3 &v) const;

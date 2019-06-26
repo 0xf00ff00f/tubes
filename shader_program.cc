@@ -60,6 +60,11 @@ int shader_program::uniform_location(std::string_view name) const
     return glGetUniformLocation(id_, name.data());
 }
 
+void shader_program::set_uniform(int location, int value) const
+{
+    glUniform1i(location, value);
+}
+
 void shader_program::set_uniform(int location, float value) const
 {
     glUniform1f(location, value);
