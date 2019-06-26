@@ -88,8 +88,7 @@ private:
             }
         }
 
-        const auto total_rings = static_cast<int>(verts_.size())/verts_per_ring;
-        for (int i = 0; i < total_rings - 1; ++i)
+        for (int i = 0; i < rings_per_segment - 1; ++i)
         {
             for (int j = 0; j < verts_per_ring; ++j)
             {
