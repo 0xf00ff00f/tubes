@@ -26,7 +26,7 @@
 class sphere_geometry
 {
 public:
-    sphere_geometry(glm::vec3 &center, float radius, int max_subdivisions)
+    sphere_geometry(const glm::vec3 &center, float radius, int max_subdivisions)
         : center_(center)
         , radius_(radius)
         , max_subdivisions_(max_subdivisions)
